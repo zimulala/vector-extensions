@@ -14,12 +14,14 @@ use crate::sources::topsql_v2::upstream::consts::{
     LABEL_NORMALIZED_PLAN, LABEL_NORMALIZED_SQL, LABEL_PLAN_DIGEST,
     LABEL_SQL_DIGEST, LABEL_SOURCE_TABLE, LABEL_TIMESTAMPS,
     LABEL_DB_NAME, LABEL_TABLE_NAME, LABEL_TABLE_ID, LABEL_TAG_LABEL, LABEL_REGION_ID,
+    LABEL_KEYSPACE_NAME, LABEL_USER,
     METRIC_NAME_CPU_TIME_MS, METRIC_NAME_NETWORK_IN_BYTES, METRIC_NAME_NETWORK_OUT_BYTES,
     METRIC_NAME_STMT_DURATION_COUNT, METRIC_NAME_STMT_DURATION_SUM_NS, METRIC_NAME_STMT_EXEC_COUNT,
     METRIC_NAME_READ_KEYS, METRIC_NAME_WRITE_KEYS,
     METRIC_NAME_LOGICAL_READ_BYTES, METRIC_NAME_LOGICAL_WRITE_BYTES,
+    METRIC_NAME_TOTAL_RU, METRIC_NAME_EXEC_DURATION,
     SOURCE_TABLE_TIDB_TOPSQL, SOURCE_TABLE_TOPSQL_PLAN_META, SOURCE_TABLE_TOPSQL_SQL_META,
-    SOURCE_TABLE_TIKV_TOPSQL, SOURCE_TABLE_TIKV_TOPREGION,
+    SOURCE_TABLE_TIKV_TOPSQL, SOURCE_TABLE_TIKV_TOPREGION, SOURCE_TABLE_TIDB_TOPRU,
     KV_TAG_LABEL_UNKNOWN,
 };
 
@@ -303,6 +305,58 @@ fn create_event_for_tikv_region(
         log.insert(METRIC_NAME_NETWORK_OUT_BYTES, LogValue::from(network_out_vec[i]));
         log.insert(METRIC_NAME_LOGICAL_READ_BYTES, LogValue::from(logical_read_vec[i]));
         log.insert(METRIC_NAME_LOGICAL_WRITE_BYTES, LogValue::from(logical_write_vec[i]));
+        events.push(event);
+    }
+    events
+}
+
+/// Create TopRU events (one record per minute)
+/// TopRU aggregates data by keyspace, user, sql_digest, and plan_digest
+fn create_event_for_topru(
+    index: usize,
+    timestamp: i64,
+    sql_digest_vec: &Vec<String>,
+    plan_digest_vec: &Vec<String>,
+    keyspace_vec: &Vec<String>,
+    user_vec: &Vec<String>,
+    total_ru_vec: &Vec<i64>,
+    exec_count_vec: &Vec<i64>,
+    exec_duration_vec: &Vec<i64>,
+    top_n: usize,
+) -> Vec<Event> {
+    let mut events = vec![];
+    let instance = format!("127.0.1.{}", index);
+    let instance_key = format!("topru_tidb_{}", instance);
+    let mut date = String::new();
+    let digest_count = sql_digest_vec.len();
+    let keyspace_count = keyspace_vec.len();
+    let user_count = user_vec.len();
+    
+    // Generate random indices for digest, keyspace, and user
+    let digest_indices = generate_random_indices(top_n, digest_count);
+    let keyspace_indices = generate_random_indices(top_n, keyspace_count);
+    let user_indices = generate_random_indices(top_n, user_count);
+    
+    for (i, &digest_idx) in digest_indices.iter().enumerate() {
+        let mut event = Event::Log(LogEvent::default());
+        let log = event.as_mut_log();
+
+        log.insert(LABEL_SOURCE_TABLE, SOURCE_TABLE_TIDB_TOPRU);
+        log.insert(LABEL_TIMESTAMPS, LogValue::from(timestamp));
+        if date.is_empty() {
+            date = chrono::DateTime::from_timestamp(timestamp, 0)
+                .map(|dt| dt.format("%Y-%m-%d").to_string())
+                .unwrap_or_else(|| "1970-01-01".to_string());
+        }
+        log.insert(LABEL_DATE, LogValue::from(date.clone()));
+        log.insert(LABEL_INSTANCE_KEY, instance_key.clone());
+        log.insert(LABEL_KEYSPACE_NAME, keyspace_vec[keyspace_indices[i]].clone());
+        log.insert(LABEL_USER, user_vec[user_indices[i]].clone());
+        log.insert(LABEL_SQL_DIGEST, sql_digest_vec[digest_idx].clone());
+        log.insert(LABEL_PLAN_DIGEST, plan_digest_vec[digest_idx].clone());
+        log.insert(METRIC_NAME_TOTAL_RU, LogValue::from(total_ru_vec[i] as f64));
+        log.insert(METRIC_NAME_STMT_EXEC_COUNT, LogValue::from(exec_count_vec[i]));
+        log.insert(METRIC_NAME_EXEC_DURATION, LogValue::from(exec_duration_vec[i]));
         events.push(event);
     }
     events

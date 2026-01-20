@@ -9,6 +9,8 @@ use crate::sources::mocked_topsql::controller::Controller;
 
 mod controller;
 pub mod shutdown;
+pub mod examples;
+pub mod generate_data;
 
 /// PLACEHOLDER
 #[configurable_component(source("mocked_topsql"))]

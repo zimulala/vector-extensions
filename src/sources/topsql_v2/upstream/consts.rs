@@ -13,6 +13,8 @@ pub const LABEL_TIMESTAMPS: &str = "timestamps";
 pub const LABEL_DATE: &str = "date";
 pub const LABEL_INSTANCE_KEY: &str = "instance_key";
 pub const LABEL_REGION_ID: &str = "region_id";
+pub const LABEL_KEYSPACE_NAME: &str = "keyspace_name";
+pub const LABEL_USER: &str = "user";
 
 pub const METRIC_NAME_CPU_TIME_MS: &str = "topsql_cpu_time_ms";
 pub const METRIC_NAME_READ_KEYS: &str = "topsql_read_keys";
@@ -24,6 +26,8 @@ pub const METRIC_NAME_LOGICAL_WRITE_BYTES: &str = "topsql_logical_write_bytes";
 pub const METRIC_NAME_STMT_EXEC_COUNT: &str = "topsql_stmt_exec_count";
 pub const METRIC_NAME_STMT_DURATION_SUM_NS: &str = "topsql_stmt_duration_sum_ns";
 pub const METRIC_NAME_STMT_DURATION_COUNT: &str = "topsql_stmt_duration_count";
+pub const METRIC_NAME_TOTAL_RU: &str = "topru_total_ru";
+pub const METRIC_NAME_EXEC_DURATION: &str = "topru_exec_duration";
 
 pub const KV_TAG_LABEL_ROW: &str = "row";
 pub const KV_TAG_LABEL_INDEX: &str = "index";
@@ -35,3 +39,4 @@ pub const SOURCE_TABLE_TIKV_TOPREGION: &str = "tikv_topregion";
 pub const SOURCE_TABLE_TIDB_TOPSQL: &str = "tidb_topsql";
 pub const SOURCE_TABLE_TOPSQL_SQL_META: &str = "topsql_sql_meta";
 pub const SOURCE_TABLE_TOPSQL_PLAN_META: &str = "topsql_plan_meta";
+pub const SOURCE_TABLE_TIDB_TOPRU: &str = "tidb_topru";
