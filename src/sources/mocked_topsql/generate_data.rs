@@ -121,7 +121,15 @@ pub fn print_event_simple(event: &Event, index: usize) {
         // Get all fields
         if let Some(fields) = log.all_event_fields() {
             for (key, value) in fields {
-                println!("  {}: {:?}", key, value);
+                let formatted_value = match value {
+                    LogValue::Bytes(b) => String::from_utf8_lossy(b).to_string(),
+                    LogValue::Integer(i) => i.to_string(),
+                    LogValue::Float(f) => format!("{:.2}", f),
+                    LogValue::Boolean(b) => b.to_string(),
+                    LogValue::Timestamp(t) => t.to_string(),
+                    _ => format!("{:?}", value),
+                };
+                println!("  {}: {}", key, formatted_value);
             }
         }
         println!();
